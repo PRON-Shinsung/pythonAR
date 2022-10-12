@@ -3,6 +3,13 @@ import numpy as np
 
 cap = cv2.VideoCapture(0)
 
+def setLabel(img, pts, label):
+    (x, y, w, h) = cv2.boundingRect(pts)
+    pt1 = (x, y)
+    pt2 = (x + w, y + h)
+    cv2.rectangle(img, pt1, pt2, (0, 255, 0), 2)
+    cv2.putText(img, label, (pt1[0], pt1[1]-3), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255))
+
 def create_image(h, w, d):
     image = np.zeros((h, w,  d), np.uint8)
     color = tuple(reversed((0,0,0)))
@@ -45,36 +52,24 @@ while True:
 
     filtered = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
 
-    _, cnts = cv2.findContours(gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-    cv2.contourArea(cnts[0])
+    ret, thr = cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU)
 
-    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:5]
+    contours, _ = cv2.findContours(thr, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-    for i in cnts:
-        peri = cv2.arcLength(i, True)
-        approx = cv2.approxPolyDP(i, 0.02 * peri, True)
+    for cont in contours:
+        approx = cv2.approxPolyDP(cont, cv2.arcLength(cont, True) * 0.02, True)
+        vtc = len(approx)
 
-        if len(approx) == 4:
-            screenCnt = approx
-            size = len(screenCnt)
-            break
-        else:
-            size = 0
+        if vtc == 4:
+            setLabel(frame, cont, 'Rec')
 
-    if (size > 0):
-        cv2.line(frame, tuple(screenCnt[0][0]), tuple(screenCnt[size-1][0]), (255, 0, 0), 3)
-        for j in range(size-1):
-            color = list(np.random.random(size=3), 255)
-            cv2.line(frame, tuple(screenCnt[j, 0]), tuple(screenCnt[j-1, 0]), color, 3)
-
-
-    dstimage = create_image_multiple(height, width, depth, 2, 2)
+    dstimage = create_image_multiple(height, width, depth, 1, 2)
 
     showMultiImage(dstimage, frame, height, width, depth, 0, 0)
-    showMultiImage(dstimage, gray_3chan, height, width, depth, 0, 1)
-    showMultiImage(dstimage, threshold_3chan, height, width, depth, 1, 0)
-    showMultiImage(dstimage, filtered, height, width, depth, 1, 1)
+    #showMultiImage(dstimage, gray_3chan, height, width, depth, 0, 1)
+    #showMultiImage(dstimage, threshold_3chan, height, width, depth, 1, 0)
+    showMultiImage(dstimage, cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB), height, width, depth, 0, 1)
 
     cv2.imshow('frame', dstimage)
 
